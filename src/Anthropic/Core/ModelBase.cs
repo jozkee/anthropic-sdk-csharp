@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Anthropic.Exceptions;
+using Anthropic.Models;
 using Anthropic.Models.Beta;
 using Anthropic.Models.Messages;
 using Batches = Anthropic.Models.Messages.Batches;
@@ -26,6 +27,7 @@ public abstract record class ModelBase
         Converters =
         {
             new FrozenDictionaryConverterFactory(),
+            new ApiEnumConverter<string, ErrorType>(),
             new ApiEnumConverter<string, MediaType>(),
             new ApiEnumConverter<string, BashCodeExecutionToolResultErrorCode>(),
             new ApiEnumConverter<string, Ttl>(),
@@ -43,6 +45,8 @@ public abstract record class ModelBase
             new ApiEnumConverter<string, TextEditorCodeExecutionToolResultErrorCode>(),
             new ApiEnumConverter<string, FileType>(),
             new ApiEnumConverter<string, TextEditorCodeExecutionViewResultBlockParamFileType>(),
+            new ApiEnumConverter<string, Display>(),
+            new ApiEnumConverter<string, ThinkingConfigEnabledDisplay>(),
             new ApiEnumConverter<string, ToolAllowedCaller>(),
             new ApiEnumConverter<string, Type>(),
             new ApiEnumConverter<string, ToolBash20250124AllowedCaller>(),
@@ -57,6 +61,7 @@ public abstract record class ModelBase
             new ApiEnumConverter<string, UsageServiceTier>(),
             new ApiEnumConverter<string, WebFetchTool20250910AllowedCaller>(),
             new ApiEnumConverter<string, WebFetchTool20260209AllowedCaller>(),
+            new ApiEnumConverter<string, WebFetchTool20260309AllowedCaller>(),
             new ApiEnumConverter<string, WebFetchToolResultErrorCode>(),
             new ApiEnumConverter<string, WebSearchTool20250305AllowedCaller>(),
             new ApiEnumConverter<string, WebSearchTool20260209AllowedCaller>(),
@@ -97,6 +102,8 @@ public abstract record class ModelBase
                 string,
                 Messages::BetaTextEditorCodeExecutionViewResultBlockParamFileType
             >(),
+            new ApiEnumConverter<string, Messages::Display>(),
+            new ApiEnumConverter<string, Messages::BetaThinkingConfigEnabledDisplay>(),
             new ApiEnumConverter<string, Messages::BetaToolAllowedCaller>(),
             new ApiEnumConverter<string, Messages::BetaToolType>(),
             new ApiEnumConverter<string, Messages::BetaToolBash20241022AllowedCaller>(),
@@ -118,6 +125,7 @@ public abstract record class ModelBase
             new ApiEnumConverter<string, Messages::BetaUsageSpeed>(),
             new ApiEnumConverter<string, Messages::BetaWebFetchTool20250910AllowedCaller>(),
             new ApiEnumConverter<string, Messages::BetaWebFetchTool20260209AllowedCaller>(),
+            new ApiEnumConverter<string, Messages::BetaWebFetchTool20260309AllowedCaller>(),
             new ApiEnumConverter<string, Messages::BetaWebFetchToolResultErrorCode>(),
             new ApiEnumConverter<string, Messages::BetaWebSearchTool20250305AllowedCaller>(),
             new ApiEnumConverter<string, Messages::BetaWebSearchTool20260209AllowedCaller>(),

@@ -36,9 +36,9 @@ public class BatchCreateParamsTest : TestBase
                             [
                                 new()
                                 {
-                                    SkillID = "x",
+                                    SkillID = "pdf",
                                     Type = Messages::BetaSkillParamsType.Anthropic,
-                                    Version = "x",
+                                    Version = "latest",
                                 },
                             ],
                         },
@@ -115,7 +115,10 @@ public class BatchCreateParamsTest : TestBase
                             ]
                         ),
                         Temperature = 1,
-                        Thinking = new Messages::BetaThinkingConfigEnabled(1024),
+                        Thinking = new Messages::BetaThinkingConfigAdaptive()
+                        {
+                            Display = Messages::Display.Summarized,
+                        },
                         ToolChoice = new Messages::BetaToolChoiceAuto()
                         {
                             DisableParallelToolUse = true,
@@ -176,9 +179,9 @@ public class BatchCreateParamsTest : TestBase
                         [
                             new()
                             {
-                                SkillID = "x",
+                                SkillID = "pdf",
                                 Type = Messages::BetaSkillParamsType.Anthropic,
-                                Version = "x",
+                                Version = "latest",
                             },
                         ],
                     },
@@ -251,7 +254,10 @@ public class BatchCreateParamsTest : TestBase
                         ]
                     ),
                     Temperature = 1,
-                    Thinking = new Messages::BetaThinkingConfigEnabled(1024),
+                    Thinking = new Messages::BetaThinkingConfigAdaptive()
+                    {
+                        Display = Messages::Display.Summarized,
+                    },
                     ToolChoice = new Messages::BetaToolChoiceAuto()
                     {
                         DisableParallelToolUse = true,
@@ -332,9 +338,9 @@ public class BatchCreateParamsTest : TestBase
                             [
                                 new()
                                 {
-                                    SkillID = "x",
+                                    SkillID = "pdf",
                                     Type = Messages::BetaSkillParamsType.Anthropic,
-                                    Version = "x",
+                                    Version = "latest",
                                 },
                             ],
                         },
@@ -411,7 +417,10 @@ public class BatchCreateParamsTest : TestBase
                             ]
                         ),
                         Temperature = 1,
-                        Thinking = new Messages::BetaThinkingConfigEnabled(1024),
+                        Thinking = new Messages::BetaThinkingConfigAdaptive()
+                        {
+                            Display = Messages::Display.Summarized,
+                        },
                         ToolChoice = new Messages::BetaToolChoiceAuto()
                         {
                             DisableParallelToolUse = true,
@@ -480,9 +489,9 @@ public class BatchCreateParamsTest : TestBase
                             [
                                 new()
                                 {
-                                    SkillID = "x",
+                                    SkillID = "pdf",
                                     Type = Messages::BetaSkillParamsType.Anthropic,
-                                    Version = "x",
+                                    Version = "latest",
                                 },
                             ],
                         },
@@ -559,7 +568,10 @@ public class BatchCreateParamsTest : TestBase
                             ]
                         ),
                         Temperature = 1,
-                        Thinking = new Messages::BetaThinkingConfigEnabled(1024),
+                        Thinking = new Messages::BetaThinkingConfigAdaptive()
+                        {
+                            Display = Messages::Display.Summarized,
+                        },
                         ToolChoice = new Messages::BetaToolChoiceAuto()
                         {
                             DisableParallelToolUse = true,
@@ -631,9 +643,9 @@ public class BatchCreateParamsTest : TestBase
                             [
                                 new()
                                 {
-                                    SkillID = "x",
+                                    SkillID = "pdf",
                                     Type = Messages::BetaSkillParamsType.Anthropic,
-                                    Version = "x",
+                                    Version = "latest",
                                 },
                             ],
                         },
@@ -710,7 +722,10 @@ public class BatchCreateParamsTest : TestBase
                             ]
                         ),
                         Temperature = 1,
-                        Thinking = new Messages::BetaThinkingConfigEnabled(1024),
+                        Thinking = new Messages::BetaThinkingConfigAdaptive()
+                        {
+                            Display = Messages::Display.Summarized,
+                        },
                         ToolChoice = new Messages::BetaToolChoiceAuto()
                         {
                             DisableParallelToolUse = true,
@@ -781,9 +796,9 @@ public class BatchCreateParamsTest : TestBase
                             [
                                 new()
                                 {
-                                    SkillID = "x",
+                                    SkillID = "pdf",
                                     Type = Messages::BetaSkillParamsType.Anthropic,
-                                    Version = "x",
+                                    Version = "latest",
                                 },
                             ],
                         },
@@ -860,7 +875,10 @@ public class BatchCreateParamsTest : TestBase
                             ]
                         ),
                         Temperature = 1,
-                        Thinking = new Messages::BetaThinkingConfigEnabled(1024),
+                        Thinking = new Messages::BetaThinkingConfigAdaptive()
+                        {
+                            Display = Messages::Display.Summarized,
+                        },
                         ToolChoice = new Messages::BetaToolChoiceAuto()
                         {
                             DisableParallelToolUse = true,
@@ -934,9 +952,9 @@ public class BatchCreateParamsTest : TestBase
                             [
                                 new()
                                 {
-                                    SkillID = "x",
+                                    SkillID = "pdf",
                                     Type = Messages::BetaSkillParamsType.Anthropic,
-                                    Version = "x",
+                                    Version = "latest",
                                 },
                             ],
                         },
@@ -1013,7 +1031,10 @@ public class BatchCreateParamsTest : TestBase
                             ]
                         ),
                         Temperature = 1,
-                        Thinking = new Messages::BetaThinkingConfigEnabled(1024),
+                        Thinking = new Messages::BetaThinkingConfigAdaptive()
+                        {
+                            Display = Messages::Display.Summarized,
+                        },
                         ToolChoice = new Messages::BetaToolChoiceAuto()
                         {
                             DisableParallelToolUse = true,
@@ -1083,9 +1104,9 @@ public class RequestTest : TestBase
                     [
                         new()
                         {
-                            SkillID = "x",
+                            SkillID = "pdf",
                             Type = Messages::BetaSkillParamsType.Anthropic,
-                            Version = "x",
+                            Version = "latest",
                         },
                     ],
                 },
@@ -1158,7 +1179,10 @@ public class RequestTest : TestBase
                     ]
                 ),
                 Temperature = 1,
-                Thinking = new Messages::BetaThinkingConfigEnabled(1024),
+                Thinking = new Messages::BetaThinkingConfigAdaptive()
+                {
+                    Display = Messages::Display.Summarized,
+                },
                 ToolChoice = new Messages::BetaToolChoiceAuto() { DisableParallelToolUse = true },
                 Tools =
                 [
@@ -1209,9 +1233,9 @@ public class RequestTest : TestBase
                 [
                     new()
                     {
-                        SkillID = "x",
+                        SkillID = "pdf",
                         Type = Messages::BetaSkillParamsType.Anthropic,
-                        Version = "x",
+                        Version = "latest",
                     },
                 ],
             },
@@ -1284,7 +1308,10 @@ public class RequestTest : TestBase
                 ]
             ),
             Temperature = 1,
-            Thinking = new Messages::BetaThinkingConfigEnabled(1024),
+            Thinking = new Messages::BetaThinkingConfigAdaptive()
+            {
+                Display = Messages::Display.Summarized,
+            },
             ToolChoice = new Messages::BetaToolChoiceAuto() { DisableParallelToolUse = true },
             Tools =
             [
@@ -1343,9 +1370,9 @@ public class RequestTest : TestBase
                     [
                         new()
                         {
-                            SkillID = "x",
+                            SkillID = "pdf",
                             Type = Messages::BetaSkillParamsType.Anthropic,
-                            Version = "x",
+                            Version = "latest",
                         },
                     ],
                 },
@@ -1418,7 +1445,10 @@ public class RequestTest : TestBase
                     ]
                 ),
                 Temperature = 1,
-                Thinking = new Messages::BetaThinkingConfigEnabled(1024),
+                Thinking = new Messages::BetaThinkingConfigAdaptive()
+                {
+                    Display = Messages::Display.Summarized,
+                },
                 ToolChoice = new Messages::BetaToolChoiceAuto() { DisableParallelToolUse = true },
                 Tools =
                 [
@@ -1480,9 +1510,9 @@ public class RequestTest : TestBase
                     [
                         new()
                         {
-                            SkillID = "x",
+                            SkillID = "pdf",
                             Type = Messages::BetaSkillParamsType.Anthropic,
-                            Version = "x",
+                            Version = "latest",
                         },
                     ],
                 },
@@ -1555,7 +1585,10 @@ public class RequestTest : TestBase
                     ]
                 ),
                 Temperature = 1,
-                Thinking = new Messages::BetaThinkingConfigEnabled(1024),
+                Thinking = new Messages::BetaThinkingConfigAdaptive()
+                {
+                    Display = Messages::Display.Summarized,
+                },
                 ToolChoice = new Messages::BetaToolChoiceAuto() { DisableParallelToolUse = true },
                 Tools =
                 [
@@ -1613,9 +1646,9 @@ public class RequestTest : TestBase
                 [
                     new()
                     {
-                        SkillID = "x",
+                        SkillID = "pdf",
                         Type = Messages::BetaSkillParamsType.Anthropic,
-                        Version = "x",
+                        Version = "latest",
                     },
                 ],
             },
@@ -1688,7 +1721,10 @@ public class RequestTest : TestBase
                 ]
             ),
             Temperature = 1,
-            Thinking = new Messages::BetaThinkingConfigEnabled(1024),
+            Thinking = new Messages::BetaThinkingConfigAdaptive()
+            {
+                Display = Messages::Display.Summarized,
+            },
             ToolChoice = new Messages::BetaToolChoiceAuto() { DisableParallelToolUse = true },
             Tools =
             [
@@ -1747,9 +1783,9 @@ public class RequestTest : TestBase
                     [
                         new()
                         {
-                            SkillID = "x",
+                            SkillID = "pdf",
                             Type = Messages::BetaSkillParamsType.Anthropic,
-                            Version = "x",
+                            Version = "latest",
                         },
                     ],
                 },
@@ -1822,7 +1858,10 @@ public class RequestTest : TestBase
                     ]
                 ),
                 Temperature = 1,
-                Thinking = new Messages::BetaThinkingConfigEnabled(1024),
+                Thinking = new Messages::BetaThinkingConfigAdaptive()
+                {
+                    Display = Messages::Display.Summarized,
+                },
                 ToolChoice = new Messages::BetaToolChoiceAuto() { DisableParallelToolUse = true },
                 Tools =
                 [
@@ -1881,9 +1920,9 @@ public class RequestTest : TestBase
                     [
                         new()
                         {
-                            SkillID = "x",
+                            SkillID = "pdf",
                             Type = Messages::BetaSkillParamsType.Anthropic,
-                            Version = "x",
+                            Version = "latest",
                         },
                     ],
                 },
@@ -1956,7 +1995,10 @@ public class RequestTest : TestBase
                     ]
                 ),
                 Temperature = 1,
-                Thinking = new Messages::BetaThinkingConfigEnabled(1024),
+                Thinking = new Messages::BetaThinkingConfigAdaptive()
+                {
+                    Display = Messages::Display.Summarized,
+                },
                 ToolChoice = new Messages::BetaToolChoiceAuto() { DisableParallelToolUse = true },
                 Tools =
                 [
@@ -2017,9 +2059,9 @@ public class ParamsTest : TestBase
                 [
                     new()
                     {
-                        SkillID = "x",
+                        SkillID = "pdf",
                         Type = Messages::BetaSkillParamsType.Anthropic,
-                        Version = "x",
+                        Version = "latest",
                     },
                 ],
             },
@@ -2092,7 +2134,10 @@ public class ParamsTest : TestBase
                 ]
             ),
             Temperature = 1,
-            Thinking = new Messages::BetaThinkingConfigEnabled(1024),
+            Thinking = new Messages::BetaThinkingConfigAdaptive()
+            {
+                Display = Messages::Display.Summarized,
+            },
             ToolChoice = new Messages::BetaToolChoiceAuto() { DisableParallelToolUse = true },
             Tools =
             [
@@ -2145,9 +2190,9 @@ public class ParamsTest : TestBase
             [
                 new()
                 {
-                    SkillID = "x",
+                    SkillID = "pdf",
                     Type = Messages::BetaSkillParamsType.Anthropic,
-                    Version = "x",
+                    Version = "latest",
                 },
             ],
         };
@@ -2224,7 +2269,7 @@ public class ParamsTest : TestBase
         );
         double expectedTemperature = 1;
         Messages::BetaThinkingConfigParam expectedThinking =
-            new Messages::BetaThinkingConfigEnabled(1024);
+            new Messages::BetaThinkingConfigAdaptive() { Display = Messages::Display.Summarized };
         Messages::BetaToolChoice expectedToolChoice = new Messages::BetaToolChoiceAuto()
         {
             DisableParallelToolUse = true,
@@ -2321,9 +2366,9 @@ public class ParamsTest : TestBase
                 [
                     new()
                     {
-                        SkillID = "x",
+                        SkillID = "pdf",
                         Type = Messages::BetaSkillParamsType.Anthropic,
-                        Version = "x",
+                        Version = "latest",
                     },
                 ],
             },
@@ -2396,7 +2441,10 @@ public class ParamsTest : TestBase
                 ]
             ),
             Temperature = 1,
-            Thinking = new Messages::BetaThinkingConfigEnabled(1024),
+            Thinking = new Messages::BetaThinkingConfigAdaptive()
+            {
+                Display = Messages::Display.Summarized,
+            },
             ToolChoice = new Messages::BetaToolChoiceAuto() { DisableParallelToolUse = true },
             Tools =
             [
@@ -2454,9 +2502,9 @@ public class ParamsTest : TestBase
                 [
                     new()
                     {
-                        SkillID = "x",
+                        SkillID = "pdf",
                         Type = Messages::BetaSkillParamsType.Anthropic,
-                        Version = "x",
+                        Version = "latest",
                     },
                 ],
             },
@@ -2529,7 +2577,10 @@ public class ParamsTest : TestBase
                 ]
             ),
             Temperature = 1,
-            Thinking = new Messages::BetaThinkingConfigEnabled(1024),
+            Thinking = new Messages::BetaThinkingConfigAdaptive()
+            {
+                Display = Messages::Display.Summarized,
+            },
             ToolChoice = new Messages::BetaToolChoiceAuto() { DisableParallelToolUse = true },
             Tools =
             [
@@ -2586,9 +2637,9 @@ public class ParamsTest : TestBase
             [
                 new()
                 {
-                    SkillID = "x",
+                    SkillID = "pdf",
                     Type = Messages::BetaSkillParamsType.Anthropic,
-                    Version = "x",
+                    Version = "latest",
                 },
             ],
         };
@@ -2665,7 +2716,7 @@ public class ParamsTest : TestBase
         );
         double expectedTemperature = 1;
         Messages::BetaThinkingConfigParam expectedThinking =
-            new Messages::BetaThinkingConfigEnabled(1024);
+            new Messages::BetaThinkingConfigAdaptive() { Display = Messages::Display.Summarized };
         Messages::BetaToolChoice expectedToolChoice = new Messages::BetaToolChoiceAuto()
         {
             DisableParallelToolUse = true,
@@ -2762,9 +2813,9 @@ public class ParamsTest : TestBase
                 [
                     new()
                     {
-                        SkillID = "x",
+                        SkillID = "pdf",
                         Type = Messages::BetaSkillParamsType.Anthropic,
-                        Version = "x",
+                        Version = "latest",
                     },
                 ],
             },
@@ -2837,7 +2888,10 @@ public class ParamsTest : TestBase
                 ]
             ),
             Temperature = 1,
-            Thinking = new Messages::BetaThinkingConfigEnabled(1024),
+            Thinking = new Messages::BetaThinkingConfigAdaptive()
+            {
+                Display = Messages::Display.Summarized,
+            },
             ToolChoice = new Messages::BetaToolChoiceAuto() { DisableParallelToolUse = true },
             Tools =
             [
@@ -2892,9 +2946,9 @@ public class ParamsTest : TestBase
                 [
                     new()
                     {
-                        SkillID = "x",
+                        SkillID = "pdf",
                         Type = Messages::BetaSkillParamsType.Anthropic,
-                        Version = "x",
+                        Version = "latest",
                     },
                 ],
             },
@@ -2967,9 +3021,9 @@ public class ParamsTest : TestBase
                 [
                     new()
                     {
-                        SkillID = "x",
+                        SkillID = "pdf",
                         Type = Messages::BetaSkillParamsType.Anthropic,
-                        Version = "x",
+                        Version = "latest",
                     },
                 ],
             },
@@ -3017,9 +3071,9 @@ public class ParamsTest : TestBase
                 [
                     new()
                     {
-                        SkillID = "x",
+                        SkillID = "pdf",
                         Type = Messages::BetaSkillParamsType.Anthropic,
-                        Version = "x",
+                        Version = "latest",
                     },
                 ],
             },
@@ -3107,9 +3161,9 @@ public class ParamsTest : TestBase
                 [
                     new()
                     {
-                        SkillID = "x",
+                        SkillID = "pdf",
                         Type = Messages::BetaSkillParamsType.Anthropic,
-                        Version = "x",
+                        Version = "latest",
                     },
                 ],
             },
@@ -3210,7 +3264,10 @@ public class ParamsTest : TestBase
                 ]
             ),
             Temperature = 1,
-            Thinking = new Messages::BetaThinkingConfigEnabled(1024),
+            Thinking = new Messages::BetaThinkingConfigAdaptive()
+            {
+                Display = Messages::Display.Summarized,
+            },
             ToolChoice = new Messages::BetaToolChoiceAuto() { DisableParallelToolUse = true },
             Tools =
             [
@@ -3314,7 +3371,10 @@ public class ParamsTest : TestBase
                 ]
             ),
             Temperature = 1,
-            Thinking = new Messages::BetaThinkingConfigEnabled(1024),
+            Thinking = new Messages::BetaThinkingConfigAdaptive()
+            {
+                Display = Messages::Display.Summarized,
+            },
             ToolChoice = new Messages::BetaToolChoiceAuto() { DisableParallelToolUse = true },
             Tools =
             [
@@ -3407,7 +3467,10 @@ public class ParamsTest : TestBase
                 ]
             ),
             Temperature = 1,
-            Thinking = new Messages::BetaThinkingConfigEnabled(1024),
+            Thinking = new Messages::BetaThinkingConfigAdaptive()
+            {
+                Display = Messages::Display.Summarized,
+            },
             ToolChoice = new Messages::BetaToolChoiceAuto() { DisableParallelToolUse = true },
             Tools =
             [
@@ -3518,7 +3581,10 @@ public class ParamsTest : TestBase
                 ]
             ),
             Temperature = 1,
-            Thinking = new Messages::BetaThinkingConfigEnabled(1024),
+            Thinking = new Messages::BetaThinkingConfigAdaptive()
+            {
+                Display = Messages::Display.Summarized,
+            },
             ToolChoice = new Messages::BetaToolChoiceAuto() { DisableParallelToolUse = true },
             Tools =
             [
@@ -3580,9 +3646,9 @@ public class ParamsTest : TestBase
                 [
                     new()
                     {
-                        SkillID = "x",
+                        SkillID = "pdf",
                         Type = Messages::BetaSkillParamsType.Anthropic,
-                        Version = "x",
+                        Version = "latest",
                     },
                 ],
             },
@@ -3655,7 +3721,10 @@ public class ParamsTest : TestBase
                 ]
             ),
             Temperature = 1,
-            Thinking = new Messages::BetaThinkingConfigEnabled(1024),
+            Thinking = new Messages::BetaThinkingConfigAdaptive()
+            {
+                Display = Messages::Display.Summarized,
+            },
             ToolChoice = new Messages::BetaToolChoiceAuto() { DisableParallelToolUse = true },
             Tools =
             [
@@ -3709,9 +3778,9 @@ public class ContainerTest : TestBase
             [
                 new()
                 {
-                    SkillID = "x",
+                    SkillID = "pdf",
                     Type = Messages::BetaSkillParamsType.Anthropic,
-                    Version = "x",
+                    Version = "latest",
                 },
             ],
         };
@@ -3735,9 +3804,9 @@ public class ContainerTest : TestBase
             [
                 new()
                 {
-                    SkillID = "x",
+                    SkillID = "pdf",
                     Type = Messages::BetaSkillParamsType.Anthropic,
-                    Version = "x",
+                    Version = "latest",
                 },
             ],
         };

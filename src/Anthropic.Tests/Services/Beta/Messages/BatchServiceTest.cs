@@ -32,9 +32,9 @@ public class BatchServiceTest : TestBase
                                 [
                                     new()
                                     {
-                                        SkillID = "x",
+                                        SkillID = "pdf",
                                         Type = BetaSkillParamsType.Anthropic,
-                                        Version = "x",
+                                        Version = "latest",
                                     },
                                 ],
                             },
@@ -111,7 +111,10 @@ public class BatchServiceTest : TestBase
                                 ]
                             ),
                             Temperature = 1,
-                            Thinking = new BetaThinkingConfigEnabled(1024),
+                            Thinking = new BetaThinkingConfigAdaptive()
+                            {
+                                Display = Display.Summarized,
+                            },
                             ToolChoice = new BetaToolChoiceAuto() { DisableParallelToolUse = true },
                             Tools =
                             [
