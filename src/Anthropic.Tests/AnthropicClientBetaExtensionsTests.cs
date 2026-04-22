@@ -838,6 +838,58 @@ public class AnthropicClientBetaExtensionsTests : AnthropicClientExtensionsTests
     }
 
     [Fact]
+    public async Task GetResponseAsync_WithHostedFileContent_Image()
+    {
+        VerbatimHttpHandler handler = new(
+            expectedRequest: """
+            {
+                "max_tokens": 1024,
+                "model": "claude-haiku-4-5",
+                "messages": [{
+                    "role": "user",
+                    "content": [{
+                        "type": "image",
+                        "source": {
+                            "type": "file",
+                            "file_id": "file_abc123"
+                        }
+                    }]
+                }]
+            }
+            """,
+            actualResponse: """
+            {
+                "id": "msg_hosted_image_01",
+                "type": "message",
+                "role": "assistant",
+                "model": "claude-haiku-4-5",
+                "content": [{
+                    "type": "text",
+                    "text": "I see an image."
+                }],
+                "stop_reason": "end_turn",
+                "usage": {
+                    "input_tokens": 20,
+                    "output_tokens": 5
+                }
+            }
+            """
+        );
+
+        IChatClient chatClient = CreateChatClient(handler, "claude-haiku-4-5");
+
+        var hostedFile = new HostedFileContent("file_abc123") { MediaType = "image/png" };
+
+        ChatResponse response = await chatClient.GetResponseAsync(
+            [new ChatMessage(ChatRole.User, [hostedFile])],
+            new(),
+            TestContext.Current.CancellationToken
+        );
+        Assert.NotNull(response);
+        Assert.Equal("I see an image.", response.Text);
+    }
+
+    [Fact]
     public async Task GetResponseAsync_WithRawRepresentationFactory()
     {
         VerbatimHttpHandler handler = new(

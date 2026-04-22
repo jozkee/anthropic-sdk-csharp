@@ -684,6 +684,15 @@ public static class AnthropicBetaClientExtensions
                             );
                             break;
 
+                        case HostedFileContent fc when fc.HasTopLevelMediaType("image"):
+                            contents.Add(
+                                new BetaImageBlockParam()
+                                {
+                                    Source = new(new BetaFileImageSource(fc.FileId)),
+                                }
+                            );
+                            break;
+
                         case HostedFileContent fc:
                             contents.Add(
                                 new BetaRequestDocumentBlock()
@@ -836,6 +845,17 @@ public static class AnthropicBetaClientExtensions
                                                     ),
                                                 }
                                             ),
+
+                                            HostedFileContent fc
+                                                when fc.HasTopLevelMediaType("image") =>
+                                                new Block(
+                                                    new BetaImageBlockParam()
+                                                    {
+                                                        Source = new(
+                                                            new BetaFileImageSource(fc.FileId)
+                                                        ),
+                                                    }
+                                                ),
 
                                             HostedFileContent fc => new Block(
                                                 new BetaRequestDocumentBlock()
