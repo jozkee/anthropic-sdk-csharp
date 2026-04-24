@@ -272,7 +272,11 @@ public static class AnthropicBetaClientExtensions
 
             ChatMessage m = new(
                 ChatRole.Assistant,
-                [.. createResult.Content.Select(b => ContentBlockValueToAIContent(b.Value))]
+                [
+                    .. createResult.Content.Select(b =>
+                        ContentBlockValueToAIContent(b.Value, createResult.Container?.ID)
+                    ),
+                ]
             )
             {
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -322,6 +326,7 @@ public static class AnthropicBetaClientExtensions
             UsageDetails? usageDetails = null;
             ChatFinishReason? finishReason = null;
             Dictionary<long, StreamingFunctionData>? streamingFunctions = null;
+            string? containerId = null;
 
             await foreach (
                 var createResult in _betaService
@@ -343,6 +348,8 @@ public static class AnthropicBetaClientExtensions
                         {
                             modelID = rawMessageStart.Message.Model;
                         }
+
+                        containerId ??= rawMessageStart.Message.Container?.ID;
 
                         if (rawMessageStart.Message.Usage is { } usage)
                         {
@@ -415,6 +422,7 @@ public static class AnthropicBetaClientExtensions
                                     InitialInput = serverToolUse.Input is { Count: > 0 }
                                         ? serverToolUse.Input
                                         : null,
+                                    ContainerId = containerId,
                                     RawRepresentation = serverToolUse,
                                 };
                                 break;
@@ -430,7 +438,8 @@ public static class AnthropicBetaClientExtensions
                             case BetaContainerUploadBlock:
                                 contents.Add(
                                     ContentBlockValueToAIContent(
-                                        contentBlockStart.ContentBlock.Value
+                                        contentBlockStart.ContentBlock.Value,
+                                        containerId
                                     )
                                 );
                                 break;
@@ -1119,6 +1128,7 @@ public static class AnthropicBetaClientExtensions
                     List<BetaRequestMcpServerUrlDefinition>? mcpServers =
                         createParams.McpServers?.ToList();
                     List<BetaSkillParams>? skills = null;
+                    string? codeInterpreterContainerId = null;
                     foreach (var tool in tools)
                     {
                         switch (tool)
@@ -1180,9 +1190,10 @@ public static class AnthropicBetaClientExtensions
                                 (createdTools ??= []).Add(new BetaWebSearchTool20250305());
                                 break;
 
-                            case HostedCodeInterpreterTool:
+                            case HostedCodeInterpreterTool codeTool:
                                 (betaHeaders ??= []).Add("code-execution-2025-08-25");
                                 (createdTools ??= []).Add(new BetaCodeExecutionTool20250825());
+                                codeInterpreterContainerId ??= codeTool.ContainerId;
                                 break;
 
                             case HostedMcpServerTool mcp:
@@ -1208,20 +1219,35 @@ public static class AnthropicBetaClientExtensions
                     if (skills?.Count > 0)
                     {
                         // Merge with any existing skills in the container
+                        string? existingContainerId = codeInterpreterContainerId;
                         if (
                             createParams.Container is { } existingContainer
                             && existingContainer.TryPickBetaContainerParams(
                                 out var existingContainerParams
                             )
-                            && existingContainerParams.Skills is { Count: > 0 } existingSkills
                         )
                         {
-                            skills.InsertRange(0, existingSkills);
+                            existingContainerId ??= existingContainerParams.ID;
+                            if (existingContainerParams.Skills is { Count: > 0 } existingSkills)
+                            {
+                                skills.InsertRange(0, existingSkills);
+                            }
+                        }
+                        else if (
+                            createParams.Container is { } existingContainerRef
+                            && existingContainerRef.TryPickString(out var existingContainerRefId)
+                        )
+                        {
+                            existingContainerId ??= existingContainerRefId;
                         }
 
                         createParams = createParams with
                         {
-                            Container = new BetaContainerParams() { Skills = skills },
+                            Container = new BetaContainerParams()
+                            {
+                                ID = existingContainerId,
+                                Skills = skills,
+                            },
                         };
 
                         // Ensure code execution tool is present
@@ -1232,6 +1258,29 @@ public static class AnthropicBetaClientExtensions
                         {
                             (betaHeaders ??= []).Add("code-execution-2025-08-25");
                             (createdTools ??= []).Add(new BetaCodeExecutionTool20250825());
+                        }
+                    }
+                    else if (codeInterpreterContainerId is not null)
+                    {
+                        if (
+                            createParams.Container is { } existingContainer
+                            && existingContainer.TryPickBetaContainerParams(
+                                out var existingContainerParams
+                            )
+                        )
+                        {
+                            createParams = createParams with
+                            {
+                                Container = new BetaContainerParams()
+                                {
+                                    ID = codeInterpreterContainerId,
+                                    Skills = existingContainerParams.Skills,
+                                },
+                            };
+                        }
+                        else
+                        {
+                            createParams = createParams with { Container = codeInterpreterContainerId };
                         }
                     }
 
@@ -1474,7 +1523,10 @@ public static class AnthropicBetaClientExtensions
                 _ => ChatFinishReason.Stop,
             };
 
-        private static AIContent ContentBlockValueToAIContent(object? blockValue)
+        private static AIContent ContentBlockValueToAIContent(
+            object? blockValue,
+            string? containerId = null
+        )
         {
             static AIContent FromBetaTextBlock(BetaTextBlock text)
             {
@@ -1563,6 +1615,7 @@ public static class AnthropicBetaClientExtensions
                 {
                     CodeInterpreterToolResultContent c = new(ce.ToolUseID)
                     {
+                        ContainerId = containerId,
                         RawRepresentation = ce,
                     };
 
@@ -1645,6 +1698,7 @@ public static class AnthropicBetaClientExtensions
                 {
                     CodeInterpreterToolResultContent c = new(ce.ToolUseID)
                     {
+                        ContainerId = containerId,
                         RawRepresentation = ce,
                     };
 
@@ -1720,6 +1774,7 @@ public static class AnthropicBetaClientExtensions
                         case Name.TextEditorCodeExecution:
                             CodeInterpreterToolCallContent cic = new(serverToolUse.ID)
                             {
+                                ContainerId = containerId,
                                 RawRepresentation = serverToolUse,
                             };
 
@@ -1835,6 +1890,7 @@ public static class AnthropicBetaClientExtensions
                 {
                     CodeInterpreterToolResultContent c = new(te.ToolUseID)
                     {
+                        ContainerId = containerId,
                         RawRepresentation = te,
                     };
 
@@ -1966,6 +2022,7 @@ public static class AnthropicBetaClientExtensions
                 case Name.TextEditorCodeExecution:
                     CodeInterpreterToolCallContent cic = new(functionData.CallId)
                     {
+                        ContainerId = functionData.ContainerId,
                         RawRepresentation = functionData.RawRepresentation,
                     };
 
@@ -2069,6 +2126,7 @@ public static class AnthropicBetaClientExtensions
             public string CallId { get; set; } = "";
             public string Name { get; set; } = "";
             public Name? ServerToolName { get; set; }
+            public string? ContainerId { get; set; }
             public IReadOnlyDictionary<string, JsonElement>? InitialInput { get; set; }
             public object? RawRepresentation { get; set; }
             public StringBuilder Arguments { get; } = new();
