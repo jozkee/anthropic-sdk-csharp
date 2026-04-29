@@ -167,48 +167,22 @@ public static class AnthropicBetaClientExtensions
 
         // Resolves the container ID to send for a given HostedCodeInterpreterTool.
         // Order of precedence:
-        //   1. ExistingContainerInfo: explicit reuse always wins.
-        //   2. null Container: walk supplied chat history in reverse and surface the most
-        //      recent CodeInterpreterToolCallContent.ContainerId (implicit lift).
-        //   3. AutomaticContainerInfo or any other ContainerInfo subclass: do not lift,
-        //      letting the service allocate or pick a container.
+        //   1. ExistingContainerInfo: explicit reuse always wins, no lift performed.
+        //   2. AutomaticContainerInfo: use the most recent CodeInterpreterToolCallContent.ContainerId
+        //      observed while walking the chat history (implicit lift). This is the explicit
+        //      opt-in to history-based reuse.
+        //   3. null or any other ContainerInfo subclass: do not lift; let the service allocate
+        //      a container per its defaults.
         internal static string? ResolveCodeInterpreterContainerId(
             HostedCodeInterpreterTool codeTool,
-            IEnumerable<ChatMessage>? originalMessages
+            string? liftedContainerId
         ) =>
             codeTool.Container switch
             {
                 ExistingContainerInfo existing => existing.ContainerId,
-                null when originalMessages is not null =>
-                    FindLatestCodeInterpreterContainerId(originalMessages),
+                AutomaticContainerInfo => liftedContainerId,
                 _ => null,
             };
-
-        internal static string? FindLatestCodeInterpreterContainerId(
-            IEnumerable<ChatMessage> messages
-        )
-        {
-            // Walk the supplied chat history in reverse and surface the most recent
-            // CodeInterpreterToolCallContent.ContainerId. This adapter-side lift assumes
-            // the caller hands us the full prior assistant turns; if those have been
-            // dropped (custom history trimming, etc.), no implicit reuse will occur.
-            ChatMessage[] snapshot = messages as ChatMessage[] ?? messages.ToArray();
-            for (int i = snapshot.Length - 1; i >= 0; i--)
-            {
-                IList<AIContent> contents = snapshot[i].Contents;
-                for (int j = contents.Count - 1; j >= 0; j--)
-                {
-                    if (
-                        contents[j] is CodeInterpreterToolCallContent { ContainerId: { } id }
-                    )
-                    {
-                        return id;
-                    }
-                }
-            }
-
-            return null;
-        }
 
     private sealed class AnthropicChatClient(
         Anthropic.Services.IBetaService betaService,
@@ -277,7 +251,8 @@ public static class AnthropicBetaClientExtensions
 
             List<BetaMessageParam> messageParams = CreateMessageParams(
                 messages,
-                out List<BetaTextBlockParam>? systemMessages
+                out List<BetaTextBlockParam>? systemMessages,
+                out string? lastCodeInterpreterContainerId
             );
             bool hasHostedFiles = messages
                 .SelectMany(m => m.Contents)
@@ -288,7 +263,7 @@ public static class AnthropicBetaClientExtensions
                 systemMessages,
                 options,
                 hasHostedFiles,
-                messages
+                lastCodeInterpreterContainerId
             );
 
             // When thinking is enabled, the auto-increased max_tokens may exceed the
@@ -354,7 +329,8 @@ public static class AnthropicBetaClientExtensions
 
             List<BetaMessageParam> messageParams = CreateMessageParams(
                 messages,
-                out List<BetaTextBlockParam>? systemMessages
+                out List<BetaTextBlockParam>? systemMessages,
+                out string? lastCodeInterpreterContainerId
             );
             bool hasHostedFiles = messages
                 .SelectMany(m => m.Contents)
@@ -365,7 +341,7 @@ public static class AnthropicBetaClientExtensions
                 systemMessages,
                 options,
                 hasHostedFiles,
-                messages
+                lastCodeInterpreterContainerId
             );
 
             string? messageId = null;
@@ -591,11 +567,13 @@ public static class AnthropicBetaClientExtensions
 
         private static List<BetaMessageParam> CreateMessageParams(
             IEnumerable<ChatMessage> messages,
-            out List<BetaTextBlockParam>? systemMessages
+            out List<BetaTextBlockParam>? systemMessages,
+            out string? lastCodeInterpreterContainerId
         )
         {
             List<BetaMessageParam> messageParams = [];
             systemMessages = null;
+            lastCodeInterpreterContainerId = null;
 
             foreach (ChatMessage message in messages)
             {
@@ -623,6 +601,14 @@ public static class AnthropicBetaClientExtensions
 
                 foreach (AIContent content in message.Contents)
                 {
+                    // Capture the most recent code interpreter container id as we walk
+                    // the history; the adapter uses it to honor AutomaticContainerInfo
+                    // requests for implicit container reuse.
+                    if (content is CodeInterpreterToolCallContent { ContainerId: { } cid })
+                    {
+                        lastCodeInterpreterContainerId = cid;
+                    }
+
                     switch (content)
                     {
                         case AIContent ac
@@ -1043,7 +1029,7 @@ public static class AnthropicBetaClientExtensions
             List<BetaTextBlockParam>? systemMessages,
             ChatOptions? options,
             bool hasHostedFiles,
-            IEnumerable<ChatMessage>? originalMessages = null
+            string? liftedCodeInterpreterContainerId = null
         )
         {
             // Get the initial MessageCreateParams, either with a raw representation provided by the options
@@ -1245,7 +1231,7 @@ public static class AnthropicBetaClientExtensions
                                 {
                                     codeInterpreterContainerId = ResolveCodeInterpreterContainerId(
                                         codeTool,
-                                        originalMessages
+                                        liftedCodeInterpreterContainerId
                                     );
                                 }
 
