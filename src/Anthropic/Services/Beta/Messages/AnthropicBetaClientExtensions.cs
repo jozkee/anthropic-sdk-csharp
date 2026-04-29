@@ -1193,7 +1193,14 @@ public static class AnthropicBetaClientExtensions
                             case HostedCodeInterpreterTool codeTool:
                                 (betaHeaders ??= []).Add("code-execution-2025-08-25");
                                 (createdTools ??= []).Add(new BetaCodeExecutionTool20250825());
-                                codeInterpreterContainerId ??= codeTool.ContainerId;
+                                if (
+                                    codeInterpreterContainerId is null
+                                    && codeTool.Container is ExistingContainerInfo existingContainer
+                                )
+                                {
+                                    codeInterpreterContainerId = existingContainer.ContainerId;
+                                }
+
                                 break;
 
                             case HostedMcpServerTool mcp:
@@ -1615,7 +1622,6 @@ public static class AnthropicBetaClientExtensions
                 {
                     CodeInterpreterToolResultContent c = new(ce.ToolUseID)
                     {
-                        ContainerId = containerId,
                         RawRepresentation = ce,
                     };
 
@@ -1698,7 +1704,6 @@ public static class AnthropicBetaClientExtensions
                 {
                     CodeInterpreterToolResultContent c = new(ce.ToolUseID)
                     {
-                        ContainerId = containerId,
                         RawRepresentation = ce,
                     };
 
@@ -1890,7 +1895,6 @@ public static class AnthropicBetaClientExtensions
                 {
                     CodeInterpreterToolResultContent c = new(te.ToolUseID)
                     {
-                        ContainerId = containerId,
                         RawRepresentation = te,
                     };
 
