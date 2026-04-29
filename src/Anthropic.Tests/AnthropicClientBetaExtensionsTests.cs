@@ -1548,7 +1548,7 @@ public class AnthropicClientBetaExtensionsTests : AnthropicClientExtensionsTests
 
         ChatOptions options = new()
         {
-            Tools = [new HostedCodeInterpreterTool { Container = null }],
+            Tools = [new HostedCodeInterpreterTool()],
         };
 
         ChatResponse response = await chatClient.GetResponseAsync(
@@ -1621,9 +1621,10 @@ public class AnthropicClientBetaExtensionsTests : AnthropicClientExtensionsTests
 
         ChatOptions options = new()
         {
+            Container = ContainerInfo.Automatic(),
             Tools =
             [
-                new HostedCodeInterpreterTool { Container = ContainerInfo.Automatic() },
+                new HostedCodeInterpreterTool(),
             ],
         };
 
@@ -1695,12 +1696,10 @@ public class AnthropicClientBetaExtensionsTests : AnthropicClientExtensionsTests
 
         ChatOptions options = new()
         {
+            Container = ContainerInfo.FromExisting("cntr_explicit"),
             Tools =
             [
-                new HostedCodeInterpreterTool
-                {
-                    Container = ContainerInfo.FromExisting("cntr_explicit"),
-                },
+                new HostedCodeInterpreterTool(),
             ],
         };
 
@@ -1749,9 +1748,10 @@ public class AnthropicClientBetaExtensionsTests : AnthropicClientExtensionsTests
 
         ChatOptions options = new()
         {
+            Container = ContainerInfo.Automatic(),
             Tools =
             [
-                new HostedCodeInterpreterTool { Container = ContainerInfo.Automatic() },
+                new HostedCodeInterpreterTool(),
             ],
         };
 

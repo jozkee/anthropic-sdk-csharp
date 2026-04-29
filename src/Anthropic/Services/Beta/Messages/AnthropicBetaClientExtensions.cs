@@ -165,24 +165,24 @@ public static class AnthropicBetaClientExtensions
         return new BetaToolUnionAITool(tool);
     }
 
-        // Resolves the container ID to send for a given HostedCodeInterpreterTool.
-        // Order of precedence:
-        //   1. ExistingContainerInfo: explicit reuse always wins, no lift performed.
-        //   2. AutomaticContainerInfo: use the most recent CodeInterpreterToolCallContent.ContainerId
-        //      observed while walking the chat history (implicit lift). This is the explicit
-        //      opt-in to history-based reuse.
-        //   3. null or any other ContainerInfo subclass: do not lift; let the service allocate
-        //      a container per its defaults.
-        internal static string? ResolveCodeInterpreterContainerId(
-            HostedCodeInterpreterTool codeTool,
-            string? liftedContainerId
-        ) =>
-            codeTool.Container switch
-            {
-                ExistingContainerInfo existing => existing.ContainerId,
-                AutomaticContainerInfo => liftedContainerId,
-                _ => null,
-            };
+    // Resolves the container ID to send when a code interpreter / code execution tool is in use.
+    // Order of precedence:
+    //   1. ExistingContainerInfo: explicit reuse always wins, no lift performed.
+    //   2. AutomaticContainerInfo: use the most recent CodeInterpreterToolCallContent.ContainerId
+    //      observed while walking the chat history (implicit lift). This is the explicit
+    //      opt-in to history-based reuse.
+    //   3. null or any other ContainerInfo subclass: do not lift; let the service allocate
+    //      a container per its defaults.
+    internal static string? ResolveCodeInterpreterContainerId(
+        ContainerInfo? container,
+        string? liftedContainerId
+    ) =>
+        container switch
+        {
+            ExistingContainerInfo existing => existing.ContainerId,
+            AutomaticContainerInfo => liftedContainerId,
+            _ => null,
+        };
 
     private sealed class AnthropicChatClient(
         Anthropic.Services.IBetaService betaService,
@@ -1230,7 +1230,7 @@ public static class AnthropicBetaClientExtensions
                                 if (codeInterpreterContainerId is null)
                                 {
                                     codeInterpreterContainerId = ResolveCodeInterpreterContainerId(
-                                        codeTool,
+                                        options.Container,
                                         liftedCodeInterpreterContainerId
                                     );
                                 }
