@@ -1566,7 +1566,7 @@ public static class AnthropicBetaClientExtensions
 
         private static AIContent ContentBlockValueToAIContent(
             object? blockValue,
-            string? containerId = null
+            string? containerId
         )
         {
             static AIContent FromBetaTextBlock(BetaTextBlock text)
