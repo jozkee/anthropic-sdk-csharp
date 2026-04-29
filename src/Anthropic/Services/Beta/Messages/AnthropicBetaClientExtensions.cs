@@ -168,10 +168,10 @@ public static class AnthropicBetaClientExtensions
     // Resolves the container ID to send when a code interpreter / code execution tool is in use.
     // Order of precedence:
     //   1. ExistingContainerInfo: explicit reuse always wins, no lift performed.
-    //   2. AutomaticContainerInfo: use the most recent CodeInterpreterToolCallContent.ContainerId
-    //      observed while walking the chat history (implicit lift). This is the explicit
-    //      opt-in to history-based reuse.
-    //   3. null or any other ContainerInfo subclass: do not lift; let the service allocate
+    //   2. null: lift the most recent CodeInterpreterToolCallContent.ContainerId observed while
+    //      walking the chat history. If none is found, no container hint is sent and the service
+    //      allocates a container per its defaults.
+    //   3. Any other ContainerInfo subclass: do not lift; let the service allocate
     //      a container per its defaults.
     internal static string? ResolveCodeInterpreterContainerId(
         ContainerInfo? container,
@@ -180,7 +180,7 @@ public static class AnthropicBetaClientExtensions
         container switch
         {
             ExistingContainerInfo existing => existing.ContainerId,
-            AutomaticContainerInfo => liftedContainerId,
+            null => liftedContainerId,
             _ => null,
         };
 
@@ -602,8 +602,8 @@ public static class AnthropicBetaClientExtensions
                 foreach (AIContent content in message.Contents)
                 {
                     // Capture the most recent code interpreter container id as we walk
-                    // the history; the adapter uses it to honor AutomaticContainerInfo
-                    // requests for implicit container reuse.
+                    // the history; the adapter uses it to perform implicit container
+                    // reuse when ChatOptions.Container is null.
                     if (content is CodeInterpreterToolCallContent { ContainerId: { } cid })
                     {
                         lastCodeInterpreterContainerId = cid;

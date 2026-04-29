@@ -1489,80 +1489,9 @@ public class AnthropicClientBetaExtensionsTests : AnthropicClientExtensionsTests
     }
 
     [Fact]
-    public async Task GetResponseAsync_HostedCodeInterpreter_NullContainer_DoesNotLiftFromHistory()
+    public async Task GetResponseAsync_HostedCodeInterpreter_NullContainer_LiftsMostRecentFromHistory()
     {
-        // Container == null means "do not lift". Even if a prior CodeInterpreterToolCallContent
-        // carried a container id, the request must not include a top-level "container" field.
-        VerbatimHttpHandler handler = new(
-            expectedRequest: """
-            {
-                "max_tokens": 1024,
-                "model": "claude-haiku-4-5",
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": [{ "type": "text", "text": "First" }]
-                    },
-                    {
-                        "role": "assistant",
-                        "content": [{ "type": "text", "text": "Sure." }]
-                    },
-                    {
-                        "role": "user",
-                        "content": [{ "type": "text", "text": "Follow up" }]
-                    }
-                ],
-                "tools": [{
-                    "type": "code_execution_20250825",
-                    "name": "code_execution"
-                }]
-            }
-            """,
-            actualResponse: """
-            {
-                "id": "msg_lift_null_01",
-                "type": "message",
-                "role": "assistant",
-                "model": "claude-haiku-4-5",
-                "content": [{ "type": "text", "text": "ok" }],
-                "stop_reason": "end_turn",
-                "usage": { "input_tokens": 1, "output_tokens": 1 }
-            }
-            """
-        );
-
-        IChatClient chatClient = CreateChatClient(handler, "claude-haiku-4-5");
-
-        List<ChatMessage> messages =
-        [
-            new ChatMessage(ChatRole.User, "First"),
-            new ChatMessage(
-                ChatRole.Assistant,
-                [
-                    new TextContent("Sure."),
-                    new CodeInterpreterToolCallContent("call-1") { ContainerId = "cntr_prior" },
-                ]
-            ),
-            new ChatMessage(ChatRole.User, "Follow up"),
-        ];
-
-        ChatOptions options = new()
-        {
-            Tools = [new HostedCodeInterpreterTool()],
-        };
-
-        ChatResponse response = await chatClient.GetResponseAsync(
-            messages,
-            options,
-            TestContext.Current.CancellationToken
-        );
-        Assert.NotNull(response);
-    }
-
-    [Fact]
-    public async Task GetResponseAsync_HostedCodeInterpreter_AutomaticContainer_LiftsFromHistory()
-    {
-        // Container == Automatic() opts in to implicit lift: the most recent
+        // Container == null performs the implicit lift: the most recent
         // CodeInterpreterToolCallContent.ContainerId from history is sent on the wire.
         VerbatimHttpHandler handler = new(
             expectedRequest: """
@@ -1621,7 +1550,6 @@ public class AnthropicClientBetaExtensionsTests : AnthropicClientExtensionsTests
 
         ChatOptions options = new()
         {
-            Container = ContainerInfo.Automatic(),
             Tools =
             [
                 new HostedCodeInterpreterTool(),
@@ -1712,9 +1640,9 @@ public class AnthropicClientBetaExtensionsTests : AnthropicClientExtensionsTests
     }
 
     [Fact]
-    public async Task GetResponseAsync_HostedCodeInterpreter_AutomaticContainer_NoHistory_DoesNotSetContainer()
+    public async Task GetResponseAsync_HostedCodeInterpreter_NullContainer_NoHistory_DoesNotSetContainer()
     {
-        // Automatic() with no prior CodeInterpreterToolCallContent in history should not
+        // Container == null with no prior CodeInterpreterToolCallContent in history should not
         // emit a "container" field; the service allocates a fresh one.
         VerbatimHttpHandler handler = new(
             expectedRequest: """
@@ -1748,7 +1676,6 @@ public class AnthropicClientBetaExtensionsTests : AnthropicClientExtensionsTests
 
         ChatOptions options = new()
         {
-            Container = ContainerInfo.Automatic(),
             Tools =
             [
                 new HostedCodeInterpreterTool(),
