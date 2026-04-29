@@ -165,6 +165,51 @@ public static class AnthropicBetaClientExtensions
         return new BetaToolUnionAITool(tool);
     }
 
+        // Resolves the container ID to send for a given HostedCodeInterpreterTool.
+        // Order of precedence:
+        //   1. ExistingContainerInfo: explicit reuse always wins.
+        //   2. null Container: walk supplied chat history in reverse and surface the most
+        //      recent CodeInterpreterToolCallContent.ContainerId (implicit lift).
+        //   3. AutomaticContainerInfo or any other ContainerInfo subclass: do not lift,
+        //      letting the service allocate or pick a container.
+        internal static string? ResolveCodeInterpreterContainerId(
+            HostedCodeInterpreterTool codeTool,
+            IEnumerable<ChatMessage>? originalMessages
+        ) =>
+            codeTool.Container switch
+            {
+                ExistingContainerInfo existing => existing.ContainerId,
+                null when originalMessages is not null =>
+                    FindLatestCodeInterpreterContainerId(originalMessages),
+                _ => null,
+            };
+
+        internal static string? FindLatestCodeInterpreterContainerId(
+            IEnumerable<ChatMessage> messages
+        )
+        {
+            // Walk the supplied chat history in reverse and surface the most recent
+            // CodeInterpreterToolCallContent.ContainerId. This adapter-side lift assumes
+            // the caller hands us the full prior assistant turns; if those have been
+            // dropped (custom history trimming, etc.), no implicit reuse will occur.
+            ChatMessage[] snapshot = messages as ChatMessage[] ?? messages.ToArray();
+            for (int i = snapshot.Length - 1; i >= 0; i--)
+            {
+                IList<AIContent> contents = snapshot[i].Contents;
+                for (int j = contents.Count - 1; j >= 0; j--)
+                {
+                    if (
+                        contents[j] is CodeInterpreterToolCallContent { ContainerId: { } id }
+                    )
+                    {
+                        return id;
+                    }
+                }
+            }
+
+            return null;
+        }
+
     private sealed class AnthropicChatClient(
         Anthropic.Services.IBetaService betaService,
         string? defaultModelId,
@@ -242,7 +287,8 @@ public static class AnthropicBetaClientExtensions
                 messageParams,
                 systemMessages,
                 options,
-                hasHostedFiles
+                hasHostedFiles,
+                messages
             );
 
             // When thinking is enabled, the auto-increased max_tokens may exceed the
@@ -318,7 +364,8 @@ public static class AnthropicBetaClientExtensions
                 messageParams,
                 systemMessages,
                 options,
-                hasHostedFiles
+                hasHostedFiles,
+                messages
             );
 
             string? messageId = null;
@@ -995,7 +1042,8 @@ public static class AnthropicBetaClientExtensions
             List<BetaMessageParam> messages,
             List<BetaTextBlockParam>? systemMessages,
             ChatOptions? options,
-            bool hasHostedFiles
+            bool hasHostedFiles,
+            IEnumerable<ChatMessage>? originalMessages = null
         )
         {
             // Get the initial MessageCreateParams, either with a raw representation provided by the options
@@ -1193,12 +1241,12 @@ public static class AnthropicBetaClientExtensions
                             case HostedCodeInterpreterTool codeTool:
                                 (betaHeaders ??= []).Add("code-execution-2025-08-25");
                                 (createdTools ??= []).Add(new BetaCodeExecutionTool20250825());
-                                if (
-                                    codeInterpreterContainerId is null
-                                    && codeTool.Container is ExistingContainerInfo existingContainer
-                                )
+                                if (codeInterpreterContainerId is null)
                                 {
-                                    codeInterpreterContainerId = existingContainer.ContainerId;
+                                    codeInterpreterContainerId = ResolveCodeInterpreterContainerId(
+                                        codeTool,
+                                        originalMessages
+                                    );
                                 }
 
                                 break;
