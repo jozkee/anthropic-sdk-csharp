@@ -168,11 +168,10 @@ public static class AnthropicBetaClientExtensions
     // Resolves the container ID to send when a code interpreter / code execution tool is in use.
     // Order of precedence:
     //   1. ExistingContainerInfo: explicit reuse always wins, no lift performed.
-    //   2. null: lift the most recent CodeInterpreterToolCallContent.ContainerId observed while
-    //      walking the chat history. If none is found, no container hint is sent and the service
-    //      allocates a container per its defaults.
-    //   3. Any other ContainerInfo subclass: do not lift; let the service allocate
-    //      a container per its defaults.
+    //   2. Otherwise (null or any other ContainerInfo subclass): lift the most recent
+    //      CodeInterpreterToolCallContent.ContainerId observed while walking the chat history.
+    //      If none is found, no container hint is sent and the service allocates a container
+    //      per its defaults.
     internal static string? ResolveCodeInterpreterContainerId(
         ContainerInfo? container,
         string? liftedContainerId
@@ -180,8 +179,7 @@ public static class AnthropicBetaClientExtensions
         container switch
         {
             ExistingContainerInfo existing => existing.ContainerId,
-            null => liftedContainerId,
-            _ => null,
+            _ => liftedContainerId,
         };
 
     private sealed class AnthropicChatClient(
