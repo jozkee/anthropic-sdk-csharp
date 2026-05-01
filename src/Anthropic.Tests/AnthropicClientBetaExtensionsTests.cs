@@ -1591,6 +1591,208 @@ public class AnthropicClientBetaExtensionsTests : AnthropicClientExtensionsTests
     }
 
     [Fact]
+    public async Task GetResponseAsync_HostedCodeInterpreter_NullContainer_LiftsMostRecentFromHistory()
+    {
+        // Container == null performs the implicit lift: the most recent
+        // CodeInterpreterToolCallContent.ContainerId from history is sent on the wire.
+        VerbatimHttpHandler handler = new(
+            expectedRequest: """
+            {
+                "max_tokens": 1024,
+                "model": "claude-haiku-4-5",
+                "container": "cntr_latest",
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [{ "type": "text", "text": "First" }]
+                    },
+                    {
+                        "role": "assistant",
+                        "content": [{ "type": "text", "text": "Sure." }]
+                    },
+                    {
+                        "role": "user",
+                        "content": [{ "type": "text", "text": "Follow up" }]
+                    }
+                ],
+                "tools": [{
+                    "type": "code_execution_20250825",
+                    "name": "code_execution"
+                }]
+            }
+            """,
+            actualResponse: """
+            {
+                "id": "msg_lift_auto_01",
+                "type": "message",
+                "role": "assistant",
+                "model": "claude-haiku-4-5",
+                "content": [{ "type": "text", "text": "ok" }],
+                "stop_reason": "end_turn",
+                "usage": { "input_tokens": 1, "output_tokens": 1 }
+            }
+            """
+        );
+
+        IChatClient chatClient = CreateChatClient(handler, "claude-haiku-4-5");
+
+        List<ChatMessage> messages =
+        [
+            new ChatMessage(ChatRole.User, "First"),
+            new ChatMessage(
+                ChatRole.Assistant,
+                [
+                    new TextContent("Sure."),
+                    new CodeInterpreterToolCallContent("call-1") { ContainerId = "cntr_old" },
+                    new CodeInterpreterToolCallContent("call-2") { ContainerId = "cntr_latest" },
+                ]
+            ),
+            new ChatMessage(ChatRole.User, "Follow up"),
+        ];
+
+        ChatOptions options = new()
+        {
+            Tools =
+            [
+                new HostedCodeInterpreterTool(),
+            ],
+        };
+
+        ChatResponse response = await chatClient.GetResponseAsync(
+            messages,
+            options,
+            TestContext.Current.CancellationToken
+        );
+        Assert.NotNull(response);
+    }
+
+    [Fact]
+    public async Task GetResponseAsync_HostedCodeInterpreter_ExistingContainer_AlwaysWinsOverHistory()
+    {
+        // ExistingContainerInfo always wins, even if the history has a different prior container id.
+        VerbatimHttpHandler handler = new(
+            expectedRequest: """
+            {
+                "max_tokens": 1024,
+                "model": "claude-haiku-4-5",
+                "container": "cntr_explicit",
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [{ "type": "text", "text": "First" }]
+                    },
+                    {
+                        "role": "assistant",
+                        "content": [{ "type": "text", "text": "Sure." }]
+                    },
+                    {
+                        "role": "user",
+                        "content": [{ "type": "text", "text": "Follow up" }]
+                    }
+                ],
+                "tools": [{
+                    "type": "code_execution_20250825",
+                    "name": "code_execution"
+                }]
+            }
+            """,
+            actualResponse: """
+            {
+                "id": "msg_lift_existing_01",
+                "type": "message",
+                "role": "assistant",
+                "model": "claude-haiku-4-5",
+                "content": [{ "type": "text", "text": "ok" }],
+                "stop_reason": "end_turn",
+                "usage": { "input_tokens": 1, "output_tokens": 1 }
+            }
+            """
+        );
+
+        IChatClient chatClient = CreateChatClient(handler, "claude-haiku-4-5");
+
+        List<ChatMessage> messages =
+        [
+            new ChatMessage(ChatRole.User, "First"),
+            new ChatMessage(
+                ChatRole.Assistant,
+                [
+                    new TextContent("Sure."),
+                    new CodeInterpreterToolCallContent("call-1") { ContainerId = "cntr_history" },
+                ]
+            ),
+            new ChatMessage(ChatRole.User, "Follow up"),
+        ];
+
+        ChatOptions options = new()
+        {
+            Container = ContainerInfo.FromExisting("cntr_explicit"),
+            Tools =
+            [
+                new HostedCodeInterpreterTool(),
+            ],
+        };
+
+        ChatResponse response = await chatClient.GetResponseAsync(
+            messages,
+            options,
+            TestContext.Current.CancellationToken
+        );
+        Assert.NotNull(response);
+    }
+
+    [Fact]
+    public async Task GetResponseAsync_HostedCodeInterpreter_NullContainer_NoHistory_DoesNotSetContainer()
+    {
+        // Container == null with no prior CodeInterpreterToolCallContent in history should not
+        // emit a "container" field; the service allocates a fresh one.
+        VerbatimHttpHandler handler = new(
+            expectedRequest: """
+            {
+                "max_tokens": 1024,
+                "model": "claude-haiku-4-5",
+                "messages": [{
+                    "role": "user",
+                    "content": [{ "type": "text", "text": "Run code" }]
+                }],
+                "tools": [{
+                    "type": "code_execution_20250825",
+                    "name": "code_execution"
+                }]
+            }
+            """,
+            actualResponse: """
+            {
+                "id": "msg_lift_auto_nohistory_01",
+                "type": "message",
+                "role": "assistant",
+                "model": "claude-haiku-4-5",
+                "content": [{ "type": "text", "text": "ok" }],
+                "stop_reason": "end_turn",
+                "usage": { "input_tokens": 1, "output_tokens": 1 }
+            }
+            """
+        );
+
+        IChatClient chatClient = CreateChatClient(handler, "claude-haiku-4-5");
+
+        ChatOptions options = new()
+        {
+            Tools =
+            [
+                new HostedCodeInterpreterTool(),
+            ],
+        };
+
+        ChatResponse response = await chatClient.GetResponseAsync(
+            "Run code",
+            options,
+            TestContext.Current.CancellationToken
+        );
+        Assert.NotNull(response);
+    }
+
+    [Fact]
     public async Task GetResponseAsync_IncludesMeaiUserAgentHeader()
     {
         string[]? capturedUserAgentValues = null;

@@ -165,6 +165,23 @@ public static class AnthropicBetaClientExtensions
         return new BetaToolUnionAITool(tool);
     }
 
+    // Resolves the container ID to send when a code interpreter / code execution tool is in use.
+    // Order of precedence:
+    //   1. ExistingContainerInfo: explicit reuse always wins, no lift performed.
+    //   2. Otherwise (null or any other ContainerInfo subclass): lift the most recent
+    //      CodeInterpreterToolCallContent.ContainerId observed while walking the chat history.
+    //      If none is found, no container hint is sent and the service allocates a container
+    //      per its defaults.
+    internal static string? ResolveCodeInterpreterContainerId(
+        ContainerInfo? container,
+        string? liftedContainerId
+    ) =>
+        container switch
+        {
+            ExistingContainerInfo existing => existing.ContainerId,
+            _ => liftedContainerId,
+        };
+
     private sealed class AnthropicChatClient(
         Anthropic.Services.IBetaService betaService,
         string? defaultModelId,
@@ -233,13 +250,15 @@ public static class AnthropicBetaClientExtensions
             List<BetaMessageParam> messageParams = CreateMessageParams(
                 messages,
                 out List<BetaTextBlockParam>? systemMessages,
-                out bool hasHostedFiles
+                out bool hasHostedFiles,
+                out string? lastCodeInterpreterContainerId
             );
             MessageCreateParams createParams = GetMessageCreateParams(
                 messageParams,
                 systemMessages,
                 options,
-                hasHostedFiles
+                hasHostedFiles,
+                lastCodeInterpreterContainerId
             );
 
             // When thinking is enabled, the auto-increased max_tokens may exceed the
@@ -269,7 +288,11 @@ public static class AnthropicBetaClientExtensions
 
             ChatMessage m = new(
                 ChatRole.Assistant,
-                [.. createResult.Content.Select(b => ContentBlockValueToAIContent(b.Value))]
+                [
+                    .. createResult.Content.Select(b =>
+                        ContentBlockValueToAIContent(b.Value, createResult.Container?.ID)
+                    ),
+                ]
             )
             {
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -302,13 +325,15 @@ public static class AnthropicBetaClientExtensions
             List<BetaMessageParam> messageParams = CreateMessageParams(
                 messages,
                 out List<BetaTextBlockParam>? systemMessages,
-                out bool hasHostedFiles
+                out bool hasHostedFiles,
+                out string? lastCodeInterpreterContainerId
             );
             MessageCreateParams createParams = GetMessageCreateParams(
                 messageParams,
                 systemMessages,
                 options,
-                hasHostedFiles
+                hasHostedFiles,
+                lastCodeInterpreterContainerId
             );
 
             string? messageId = null;
@@ -316,6 +341,7 @@ public static class AnthropicBetaClientExtensions
             UsageDetails? usageDetails = null;
             ChatFinishReason? finishReason = null;
             Dictionary<long, StreamingFunctionData>? streamingFunctions = null;
+            string? containerId = null;
 
             await foreach (
                 var createResult in _betaService
@@ -337,6 +363,8 @@ public static class AnthropicBetaClientExtensions
                         {
                             modelID = rawMessageStart.Message.Model;
                         }
+
+                        containerId ??= rawMessageStart.Message.Container?.ID;
 
                         if (rawMessageStart.Message.Usage is { } usage)
                         {
@@ -409,6 +437,7 @@ public static class AnthropicBetaClientExtensions
                                     InitialInput = serverToolUse.Input is { Count: > 0 }
                                         ? serverToolUse.Input
                                         : null,
+                                    ContainerId = containerId,
                                     RawRepresentation = serverToolUse,
                                 };
                                 break;
@@ -424,7 +453,8 @@ public static class AnthropicBetaClientExtensions
                             case BetaContainerUploadBlock:
                                 contents.Add(
                                     ContentBlockValueToAIContent(
-                                        contentBlockStart.ContentBlock.Value
+                                        contentBlockStart.ContentBlock.Value,
+                                        containerId
                                     )
                                 );
                                 break;
@@ -530,12 +560,14 @@ public static class AnthropicBetaClientExtensions
         private static List<BetaMessageParam> CreateMessageParams(
             IEnumerable<ChatMessage> messages,
             out List<BetaTextBlockParam>? systemMessages,
-            out bool hasHostedFiles
+            out bool hasHostedFiles,
+            out string? lastCodeInterpreterContainerId
         )
         {
             List<BetaMessageParam> messageParams = [];
             systemMessages = null;
             hasHostedFiles = false;
+            lastCodeInterpreterContainerId = null;
 
             foreach (ChatMessage message in messages)
             {
@@ -563,6 +595,14 @@ public static class AnthropicBetaClientExtensions
 
                 foreach (AIContent content in message.Contents)
                 {
+                    // Capture the most recent code interpreter container id as we walk
+                    // the history; the adapter uses it to perform implicit container
+                    // reuse when ChatOptions.Container is null.
+                    if (content is CodeInterpreterToolCallContent { ContainerId: { } cid })
+                    {
+                        lastCodeInterpreterContainerId = cid;
+                    }
+
                     switch (content)
                     {
                         case AIContent ac
@@ -1040,7 +1080,8 @@ public static class AnthropicBetaClientExtensions
             List<BetaMessageParam> messages,
             List<BetaTextBlockParam>? systemMessages,
             ChatOptions? options,
-            bool hasHostedFiles
+            bool hasHostedFiles,
+            string? liftedCodeInterpreterContainerId = null
         )
         {
             // Get the initial MessageCreateParams, either with a raw representation provided by the options
@@ -1173,6 +1214,7 @@ public static class AnthropicBetaClientExtensions
                     List<BetaRequestMcpServerUrlDefinition>? mcpServers =
                         createParams.McpServers?.ToList();
                     List<BetaSkillParams>? skills = null;
+                    string? codeInterpreterContainerId = null;
                     foreach (var tool in tools)
                     {
                         switch (tool)
@@ -1234,9 +1276,17 @@ public static class AnthropicBetaClientExtensions
                                 (createdTools ??= []).Add(new BetaWebSearchTool20250305());
                                 break;
 
-                            case HostedCodeInterpreterTool:
+                            case HostedCodeInterpreterTool codeTool:
                                 (betaHeaders ??= []).Add("code-execution-2025-08-25");
                                 (createdTools ??= []).Add(new BetaCodeExecutionTool20250825());
+                                if (codeInterpreterContainerId is null)
+                                {
+                                    codeInterpreterContainerId = ResolveCodeInterpreterContainerId(
+                                        options.Container,
+                                        liftedCodeInterpreterContainerId
+                                    );
+                                }
+
                                 break;
 
                             case HostedMcpServerTool mcp:
@@ -1262,20 +1312,35 @@ public static class AnthropicBetaClientExtensions
                     if (skills?.Count > 0)
                     {
                         // Merge with any existing skills in the container
+                        string? existingContainerId = codeInterpreterContainerId;
                         if (
                             createParams.Container is { } existingContainer
                             && existingContainer.TryPickBetaContainerParams(
                                 out var existingContainerParams
                             )
-                            && existingContainerParams.Skills is { Count: > 0 } existingSkills
                         )
                         {
-                            skills.InsertRange(0, existingSkills);
+                            existingContainerId ??= existingContainerParams.ID;
+                            if (existingContainerParams.Skills is { Count: > 0 } existingSkills)
+                            {
+                                skills.InsertRange(0, existingSkills);
+                            }
+                        }
+                        else if (
+                            createParams.Container is { } existingContainerRef
+                            && existingContainerRef.TryPickString(out var existingContainerRefId)
+                        )
+                        {
+                            existingContainerId ??= existingContainerRefId;
                         }
 
                         createParams = createParams with
                         {
-                            Container = new BetaContainerParams() { Skills = skills },
+                            Container = new BetaContainerParams()
+                            {
+                                ID = existingContainerId,
+                                Skills = skills,
+                            },
                         };
 
                         // Ensure code execution tool is present
@@ -1286,6 +1351,29 @@ public static class AnthropicBetaClientExtensions
                         {
                             (betaHeaders ??= []).Add("code-execution-2025-08-25");
                             (createdTools ??= []).Add(new BetaCodeExecutionTool20250825());
+                        }
+                    }
+                    else if (codeInterpreterContainerId is not null)
+                    {
+                        if (
+                            createParams.Container is { } existingContainer
+                            && existingContainer.TryPickBetaContainerParams(
+                                out var existingContainerParams
+                            )
+                        )
+                        {
+                            createParams = createParams with
+                            {
+                                Container = new BetaContainerParams()
+                                {
+                                    ID = codeInterpreterContainerId,
+                                    Skills = existingContainerParams.Skills,
+                                },
+                            };
+                        }
+                        else
+                        {
+                            createParams = createParams with { Container = codeInterpreterContainerId };
                         }
                     }
 
@@ -1528,7 +1616,10 @@ public static class AnthropicBetaClientExtensions
                 _ => ChatFinishReason.Stop,
             };
 
-        private static AIContent ContentBlockValueToAIContent(object? blockValue)
+        private static AIContent ContentBlockValueToAIContent(
+            object? blockValue,
+            string? containerId
+        )
         {
             static AIContent FromBetaTextBlock(BetaTextBlock text)
             {
@@ -1774,6 +1865,7 @@ public static class AnthropicBetaClientExtensions
                         case Name.TextEditorCodeExecution:
                             CodeInterpreterToolCallContent cic = new(serverToolUse.ID)
                             {
+                                ContainerId = containerId,
                                 RawRepresentation = serverToolUse,
                             };
 
@@ -2022,6 +2114,7 @@ public static class AnthropicBetaClientExtensions
                 case Name.TextEditorCodeExecution:
                     CodeInterpreterToolCallContent cic = new(functionData.CallId)
                     {
+                        ContainerId = functionData.ContainerId,
                         RawRepresentation = functionData.RawRepresentation,
                     };
 
@@ -2125,6 +2218,7 @@ public static class AnthropicBetaClientExtensions
             public string CallId { get; set; } = "";
             public string Name { get; set; } = "";
             public Name? ServerToolName { get; set; }
+            public string? ContainerId { get; set; }
             public IReadOnlyDictionary<string, JsonElement>? InitialInput { get; set; }
             public object? RawRepresentation { get; set; }
             public StringBuilder Arguments { get; } = new();
