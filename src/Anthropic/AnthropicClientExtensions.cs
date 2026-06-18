@@ -1327,6 +1327,28 @@ public static class AnthropicClientExtensions
 
                 if (options.Tools is { } tools)
                 {
+                    // Pre-scan for HostedToolSearchTool to determine which tools should be deferred.
+                    HashSet<string>? deferredToolNames = null;
+                    bool deferAll = false;
+                    foreach (var tool in tools)
+                    {
+                        if (tool is HostedToolSearchTool toolSearch)
+                        {
+                            if (toolSearch.DeferredTools is not { } deferredTools)
+                            {
+                                deferAll = true;
+                            }
+                            else
+                            {
+                                deferredToolNames ??= new(StringComparer.Ordinal);
+                                foreach (var name in deferredTools)
+                                {
+                                    deferredToolNames.Add(name);
+                                }
+                            }
+                        }
+                    }
+
                     List<ToolUnion>? createdTools = createParams.Tools?.ToList();
                     foreach (var tool in tools)
                     {
@@ -1348,16 +1370,20 @@ public static class AnthropicClientExtensions
                                     }
                                 }
 
+                                bool? deferLoading =
+                                    GetValue<bool?>(af, nameof(Tool.DeferLoading))
+                                    ?? (deferAll
+                                        || deferredToolNames?.Contains(af.Name) == true
+                                            ? true
+                                            : null);
+
                                 (createdTools ??= []).Add(
                                     new Tool()
                                     {
                                         Name = af.Name,
                                         Description = af.Description,
                                         InputSchema = new InputSchema(schemaData),
-                                        DeferLoading = GetValue<bool?>(
-                                            af,
-                                            nameof(Tool.DeferLoading)
-                                        ),
+                                        DeferLoading = deferLoading,
                                         Strict = GetValue<bool?>(af, nameof(Tool.Strict)),
                                         InputExamples = GetValue<
                                             List<Dictionary<string, JsonElement>>
@@ -1374,6 +1400,14 @@ public static class AnthropicClientExtensions
                                     && value is T tValue
                                         ? tValue
                                         : default;
+                                break;
+
+                            case HostedToolSearchTool:
+                                (createdTools ??= []).Add(
+                                    new ToolSearchToolBm25_20251119(
+                                        ToolSearchToolBm25_20251119Type.ToolSearchToolBm25
+                                    )
+                                );
                                 break;
 
                             case HostedWebSearchTool:

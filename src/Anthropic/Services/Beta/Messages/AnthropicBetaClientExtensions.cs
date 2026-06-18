@@ -1172,6 +1172,28 @@ public static class AnthropicBetaClientExtensions
 
                 if (options.Tools is { } tools)
                 {
+                    // Pre-scan for HostedToolSearchTool to determine which tools should be deferred.
+                    HashSet<string>? deferredToolNames = null;
+                    bool deferAll = false;
+                    foreach (var tool in tools)
+                    {
+                        if (tool is HostedToolSearchTool toolSearch)
+                        {
+                            if (toolSearch.DeferredTools is not { } deferredTools)
+                            {
+                                deferAll = true;
+                            }
+                            else
+                            {
+                                deferredToolNames ??= new(StringComparer.Ordinal);
+                                foreach (var name in deferredTools)
+                                {
+                                    deferredToolNames.Add(name);
+                                }
+                            }
+                        }
+                    }
+
                     List<BetaToolUnion>? createdTools = createParams.Tools?.ToList();
                     List<BetaRequestMcpServerUrlDefinition>? mcpServers =
                         createParams.McpServers?.ToList();
@@ -1205,16 +1227,20 @@ public static class AnthropicBetaClientExtensions
                                     }
                                 }
 
+                                bool? betaDeferLoading =
+                                    GetValue<bool?>(af, nameof(BetaTool.DeferLoading))
+                                    ?? (deferAll
+                                        || deferredToolNames?.Contains(af.Name) == true
+                                            ? true
+                                            : null);
+
                                 (createdTools ??= []).Add(
                                     new BetaTool()
                                     {
                                         Name = af.Name,
                                         Description = af.Description,
                                         InputSchema = new InputSchema(schemaData),
-                                        DeferLoading = GetValue<bool?>(
-                                            af,
-                                            nameof(BetaTool.DeferLoading)
-                                        ),
+                                        DeferLoading = betaDeferLoading,
                                         Strict = GetValue<bool?>(af, nameof(BetaTool.Strict)),
                                         InputExamples = GetValue<
                                             List<Dictionary<string, JsonElement>>
@@ -1231,6 +1257,14 @@ public static class AnthropicBetaClientExtensions
                                     && value is T tValue
                                         ? tValue
                                         : default;
+                                break;
+
+                            case HostedToolSearchTool:
+                                (createdTools ??= []).Add(
+                                    new BetaToolSearchToolBm25_20251119(
+                                        BetaToolSearchToolBm25_20251119Type.ToolSearchToolBm25
+                                    )
+                                );
                                 break;
 
                             case HostedWebSearchTool:

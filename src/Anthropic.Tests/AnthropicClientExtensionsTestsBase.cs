@@ -8457,4 +8457,228 @@ public abstract class AnthropicClientExtensionsTestsBase
             AnthropicClientExtensions.InferExtensionFromMediaType(mediaType)
         );
     }
+
+    [Fact]
+    public async Task GetResponseAsync_WithHostedToolSearchTool_ProducesToolSearchTool()
+    {
+        VerbatimHttpHandler handler = new(
+            expectedRequest: """
+            {
+                "model": "claude-haiku-4-5",
+                "messages": [{
+                    "role": "user",
+                    "content": [{
+                        "type": "text",
+                        "text": "Search for a tool"
+                    }]
+                }],
+                "max_tokens": 1024,
+                "tools": [
+                    {
+                        "name": "tool_search_tool_bm25",
+                        "type": "tool_search_tool_bm25"
+                    }
+                ]
+            }
+            """,
+            actualResponse: """
+            {
+                "id": "msg_ts_01",
+                "type": "message",
+                "role": "assistant",
+                "model": "claude-haiku-4-5",
+                "content": [{
+                    "type": "text",
+                    "text": "I found the tool."
+                }],
+                "stop_reason": "end_turn",
+                "usage": {
+                    "input_tokens": 20,
+                    "output_tokens": 10
+                }
+            }
+            """
+        );
+
+        IChatClient chatClient = CreateChatClient(handler, "claude-haiku-4-5");
+
+        ChatOptions options = new() { Tools = [new HostedToolSearchTool()] };
+
+        ChatResponse response = await chatClient.GetResponseAsync(
+            "Search for a tool",
+            options,
+            TestContext.Current.CancellationToken
+        );
+        Assert.NotNull(response);
+    }
+
+    [Fact]
+    public async Task GetResponseAsync_WithHostedToolSearchTool_DeferAll_SetsDeferLoadingOnFunctions()
+    {
+        VerbatimHttpHandler handler = new(
+            expectedRequest: """
+            {
+                "model": "claude-haiku-4-5",
+                "messages": [{
+                    "role": "user",
+                    "content": [{
+                        "type": "text",
+                        "text": "hello"
+                    }]
+                }],
+                "max_tokens": 1024,
+                "tools": [
+                    {
+                        "name": "tool_search_tool_bm25",
+                        "type": "tool_search_tool_bm25"
+                    },
+                    {
+                        "name": "GetWeather",
+                        "description": "Gets the weather.",
+                        "input_schema": {
+                            "type": "object",
+                            "properties": {},
+                            "additionalProperties": false
+                        },
+                        "defer_loading": true
+                    },
+                    {
+                        "name": "GetTime",
+                        "description": "Gets the time.",
+                        "input_schema": {
+                            "type": "object",
+                            "properties": {},
+                            "additionalProperties": false
+                        },
+                        "defer_loading": true
+                    }
+                ]
+            }
+            """,
+            actualResponse: """
+            {
+                "id": "msg_ts_02",
+                "type": "message",
+                "role": "assistant",
+                "model": "claude-haiku-4-5",
+                "content": [{
+                    "type": "text",
+                    "text": "Hello!"
+                }],
+                "stop_reason": "end_turn",
+                "usage": {
+                    "input_tokens": 20,
+                    "output_tokens": 5
+                }
+            }
+            """
+        );
+
+        IChatClient chatClient = CreateChatClient(handler, "claude-haiku-4-5");
+
+        var getWeather = AIFunctionFactory.Create(() => "Sunny", "GetWeather", "Gets the weather.");
+        var getTime = AIFunctionFactory.Create(() => "3 PM", "GetTime", "Gets the time.");
+
+        ChatOptions options = new()
+        {
+            Tools = [new HostedToolSearchTool(), getWeather, getTime],
+        };
+
+        ChatResponse response = await chatClient.GetResponseAsync(
+            "hello",
+            options,
+            TestContext.Current.CancellationToken
+        );
+        Assert.NotNull(response);
+        Assert.Equal("Hello!", response.Text);
+    }
+
+    [Fact]
+    public async Task GetResponseAsync_WithHostedToolSearchTool_SpecificDeferredTools_OnlyDefersNamed()
+    {
+        VerbatimHttpHandler handler = new(
+            expectedRequest: """
+            {
+                "model": "claude-haiku-4-5",
+                "messages": [{
+                    "role": "user",
+                    "content": [{
+                        "type": "text",
+                        "text": "hello"
+                    }]
+                }],
+                "max_tokens": 1024,
+                "tools": [
+                    {
+                        "name": "tool_search_tool_bm25",
+                        "type": "tool_search_tool_bm25"
+                    },
+                    {
+                        "name": "GetWeather",
+                        "description": "Gets the weather.",
+                        "input_schema": {
+                            "type": "object",
+                            "properties": {},
+                            "additionalProperties": false
+                        },
+                        "defer_loading": true
+                    },
+                    {
+                        "name": "ImportantTool",
+                        "description": "An important tool.",
+                        "input_schema": {
+                            "type": "object",
+                            "properties": {},
+                            "additionalProperties": false
+                        }
+                    }
+                ]
+            }
+            """,
+            actualResponse: """
+            {
+                "id": "msg_ts_03",
+                "type": "message",
+                "role": "assistant",
+                "model": "claude-haiku-4-5",
+                "content": [{
+                    "type": "text",
+                    "text": "Hello!"
+                }],
+                "stop_reason": "end_turn",
+                "usage": {
+                    "input_tokens": 20,
+                    "output_tokens": 5
+                }
+            }
+            """
+        );
+
+        IChatClient chatClient = CreateChatClient(handler, "claude-haiku-4-5");
+
+        var getWeather = AIFunctionFactory.Create(() => "Sunny", "GetWeather", "Gets the weather.");
+        var importantTool = AIFunctionFactory.Create(
+            () => "Done",
+            "ImportantTool",
+            "An important tool."
+        );
+
+        ChatOptions options = new()
+        {
+            Tools =
+            [
+                new HostedToolSearchTool { DeferredTools = ["GetWeather"] },
+                getWeather,
+                importantTool,
+            ],
+        };
+
+        ChatResponse response = await chatClient.GetResponseAsync(
+            "hello",
+            options,
+            TestContext.Current.CancellationToken
+        );
+        Assert.NotNull(response);
+        Assert.Equal("Hello!", response.Text);
+    }
 }
