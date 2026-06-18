@@ -570,6 +570,34 @@ public static class AnthropicBetaClientExtensions
                             contents.Add(rawContent);
                             break;
 
+                        // Server-side tool content (tool_search, web_search, code_execution)
+                        // may appear with RawRepresentation as a response-type block.
+                        // Convert to BetaContentBlockParam (request type) for round-tripping.
+                        case AIContent ac
+                            when ac.RawRepresentation is BetaServerToolUseBlock
+                                or BetaToolSearchToolResultBlock
+                                or BetaWebSearchToolResultBlock
+                                or BetaWebFetchToolResultBlock
+                                or BetaCodeExecutionToolResultBlock
+                                or BetaBashCodeExecutionToolResultBlock
+                                or BetaTextEditorCodeExecutionToolResultBlock:
+                            var rawBlock = (JsonModel)ac.RawRepresentation;
+                            var json = JsonSerializer.Serialize(
+                                rawBlock,
+                                rawBlock.GetType(),
+                                ModelBase.SerializerOptions
+                            );
+                            var paramBlock =
+                                JsonSerializer.Deserialize<BetaContentBlockParam>(
+                                    json,
+                                    ModelBase.SerializerOptions
+                                );
+                            if (paramBlock is not null)
+                            {
+                                contents.Add(paramBlock);
+                            }
+                            break;
+
                         case TextContent tc:
                             string text = tc.Text;
                             if (message.Role == ChatRole.Assistant)

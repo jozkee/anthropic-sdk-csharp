@@ -842,6 +842,32 @@ public static class AnthropicClientExtensions
                             contents.Add(rawContent);
                             break;
 
+                        // Server-side tool content (tool_search, web_search, code_execution)
+                        // may appear with RawRepresentation as a response-type block.
+                        // Convert to ContentBlockParam (request type) for round-tripping.
+                        case AIContent ac when ac.RawRepresentation is ServerToolUseBlock
+                            or ToolSearchToolResultBlock
+                            or WebSearchToolResultBlock
+                            or WebFetchToolResultBlock
+                            or CodeExecutionToolResultBlock
+                            or BashCodeExecutionToolResultBlock
+                            or TextEditorCodeExecutionToolResultBlock:
+                            var rawBlock = (JsonModel)ac.RawRepresentation;
+                            var json = JsonSerializer.Serialize(
+                                rawBlock,
+                                rawBlock.GetType(),
+                                ModelBase.SerializerOptions
+                            );
+                            var paramBlock = JsonSerializer.Deserialize<ContentBlockParam>(
+                                json,
+                                ModelBase.SerializerOptions
+                            );
+                            if (paramBlock is not null)
+                            {
+                                contents.Add(paramBlock);
+                            }
+                            break;
+
                         case TextContent tc:
                             string text = tc.Text;
                             if (message.Role == ChatRole.Assistant)

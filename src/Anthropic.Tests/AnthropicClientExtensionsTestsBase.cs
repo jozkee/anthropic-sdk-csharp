@@ -8681,4 +8681,92 @@ public abstract class AnthropicClientExtensionsTestsBase
         Assert.NotNull(response);
         Assert.Equal("Hello!", response.Text);
     }
+
+    [Fact]
+    public async Task GetResponseAsync_ServerToolUseBlock_RoundTripsAsContentBlockParam()
+    {
+        // When a previous response included a server_tool_use block (e.g. tool_search),
+        // it must be converted to a ContentBlockParam for the next request.
+        VerbatimHttpHandler handler = new(
+            expectedRequest: """
+            {
+                "model": "claude-haiku-4-5",
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [{ "type": "text", "text": "Search for weather" }]
+                    },
+                    {
+                        "role": "assistant",
+                        "content": [
+                            { "type": "text", "text": "Let me search." },
+                            {
+                                "type": "server_tool_use",
+                                "id": "srvtoolu_01ABC",
+                                "name": "tool_search_tool_bm25",
+                                "input": {},
+                                "caller": { "type": "direct" }
+                            }
+                        ]
+                    },
+                    {
+                        "role": "user",
+                        "content": [{ "type": "text", "text": "Continue" }]
+                    }
+                ],
+                "max_tokens": 1024
+            }
+            """,
+            actualResponse: """
+            {
+                "id": "msg_rt_01",
+                "type": "message",
+                "role": "assistant",
+                "model": "claude-haiku-4-5",
+                "content": [{ "type": "text", "text": "Done." }],
+                "stop_reason": "end_turn",
+                "usage": { "input_tokens": 30, "output_tokens": 5 }
+            }
+            """
+        );
+
+        IChatClient chatClient = CreateChatClient(handler, "claude-haiku-4-5");
+
+        var toolCallContent = new ToolCallContent("srvtoolu_01ABC")
+        {
+            RawRepresentation = CreateServerToolUseBlock(
+                "srvtoolu_01ABC",
+                "tool_search_tool_bm25"
+            ),
+        };
+
+        List<ChatMessage> messages =
+        [
+            new(ChatRole.User, "Search for weather"),
+            new(ChatRole.Assistant, [new TextContent("Let me search."), toolCallContent]),
+            new(ChatRole.User, "Continue"),
+        ];
+
+        ChatResponse response = await chatClient.GetResponseAsync(
+            messages,
+            cancellationToken: TestContext.Current.CancellationToken
+        );
+        Assert.NotNull(response);
+        Assert.Equal("Done.", response.Text);
+    }
+
+    /// <summary>
+    /// Creates a server_tool_use response block for round-trip testing.
+    /// Overridden by the beta adapter tests to use Beta types.
+    /// </summary>
+    protected virtual object CreateServerToolUseBlock(string id, string name)
+    {
+        return new ServerToolUseBlock()
+        {
+            ID = id,
+            Name = Name.ToolSearchToolBm25,
+            Input = new Dictionary<string, JsonElement>(),
+            Caller = new DirectCaller(),
+        };
+    }
 }
