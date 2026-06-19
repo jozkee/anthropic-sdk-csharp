@@ -64,6 +64,8 @@ Console.WriteLine();
 
 // ---- Demo 2: Selective defer ----
 // Only GetWeather and GetTime are deferred. CalculateTip stays in context.
+// AllowMultipleToolCalls enables parallel tool use so the model can invoke
+// tool_search alongside regular tool calls in a single response.
 ChatOptions selectiveOptions = new()
 {
     Tools =
@@ -73,6 +75,8 @@ ChatOptions selectiveOptions = new()
         getTime,
         calculateTip,
     ],
+    ToolMode = AutoChatToolMode.Auto,
+    AllowMultipleToolCalls = true,
 };
 
 Console.WriteLine("╔══════════════════════════════════════════════════════╗");
